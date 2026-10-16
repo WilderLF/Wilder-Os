@@ -37,16 +37,17 @@ const Settings = {
               <li>Entrá a <strong>supabase.com</strong> y creá una cuenta gratis.</li>
               <li>Creá un proyecto nuevo. Elegí la región más cercana y guardá la contraseña que te pide.</li>
               <li>En el menú lateral entrá a <strong>SQL Editor</strong> → <strong>New query</strong>, pegá todo el contenido del archivo <code>supabase/schema.sql</code> que viene con la app y tocá <strong>Run</strong>.</li>
-              <li>Andá a <strong>Project Settings → API</strong> y copiá dos cosas: la <strong>Project URL</strong> y la clave <strong>anon public</strong>.</li>
+              <li>Tocá el botón verde <strong>Connect</strong> de arriba de todo: ahí aparecen juntas la <strong>URL</strong> y la <strong>clave</strong>, listas para copiar. (También están por separado en <strong>Settings → API Keys</strong> y <strong>Settings → Data API</strong>.)</li>
               <li>Pegalas acá abajo, poné un email y una contraseña (los inventás vos, son para entrar a tu app) y tocá Conectar.</li>
             </ol>
-            <p class="dataset-note">La clave <em>anon</em> está pensada para ir en el navegador: no es un secreto. Lo que protege tus datos es la seguridad por filas que crea el archivo SQL, que hace que solo tu usuario pueda leer lo tuyo.</p>
+            <p class="dataset-note">Si te pide confirmar el mail: confirmalo y volvé a tocar Conectar. Para no tener que hacerlo cada vez, en <strong>Authentication → Sign In / Providers → Email</strong> podés desactivar <em>Confirm email</em>, y en <strong>Authentication → URL Configuration</strong> poné esta misma dirección como <em>Site URL</em> para que el mail no te mande a localhost.</p>
+            <p class="dataset-note">La clave <em>publishable</em> (o <em>anon</em>) está pensada para ir en el navegador: no es un secreto. Lo que protege tus datos es la seguridad por filas que crea el archivo SQL. La que nunca va acá es la que diga <strong>service_role</strong> o <strong>secret</strong>.</p>
           </details>
 
           <label class="label" for="sb-url">Project URL</label>
           <input id="sb-url" type="url" placeholder="https://xxxxx.supabase.co" value="${esc(cfg.url || "")}" />
-          <label class="label" for="sb-key">Clave anon public</label>
-          <input id="sb-key" type="text" placeholder="eyJhbGciOi..." value="${esc(cfg.anonKey || "")}" />
+          <label class="label" for="sb-key">Clave publishable (o anon)</label>
+          <input id="sb-key" type="text" placeholder="sb_publishable_… o eyJ…" value="${esc(cfg.anonKey || "")}" />
           <div class="form-grid">
             <label class="label-mini">Email<input id="sb-email" type="email" placeholder="vos@email.com" value="${esc(cfg.email || "")}" /></label>
             <label class="label-mini">Contraseña<input id="sb-pass" type="password" placeholder="mínimo 6 caracteres" /></label>

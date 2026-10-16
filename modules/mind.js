@@ -5,7 +5,7 @@
 const Mind = {
   id: "mind",
 
-  libros() { return Store.get("books", null) || DEFAULT_BOOKS; },
+  libros() { return Store.get("books", DEFAULT_BOOKS); },
   lecturas() { return Store.get("reading-log", []); },
   leyoHoy(k = today()) { return this.lecturas().some(l => l.fecha === k); },
   diario() { return Store.get("journal", {}); },

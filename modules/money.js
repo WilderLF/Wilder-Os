@@ -8,7 +8,7 @@ const Money = {
   id: "money",
 
   movimientos() { return Store.get("money-moves", []); },
-  metas() { return Store.get("goals", null) || DEFAULT_GOALS; },
+  metas() { return Store.get("goals", DEFAULT_GOALS); },
 
   delMes(mk = monthKey()) { return this.movimientos().filter(m => (m.fecha || "").startsWith(mk)); },
   ingresosMes(mk) { return this.delMes(mk).filter(m => m.tipo !== "gasto").reduce((a, m) => a + m.monto, 0); },

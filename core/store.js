@@ -51,12 +51,27 @@ const Store = (() => {
 
   /* ---------- API pública de lectura y escritura ---------- */
 
+  /* Devuelve siempre algo usable: si lo guardado es null o undefined
+     (pasa cuando un documento vuelve vacío de la nube), gana el valor
+     por defecto que pidió quien llama. Sin esto, un módulo que espera
+     un objeto recibe null y la pantalla queda en blanco. */
   function get(key, fallback = null) {
-    if (cache.has(key)) return cache.get(key);
+    if (cache.has(key)) return usable(cache.get(key), fallback);
     const doc = localGet(key, null);
-    const value = doc && typeof doc === "object" && "value" in doc ? doc.value : (doc ?? fallback);
-    cache.set(key, value);
-    return value;
+    const crudo = doc && typeof doc === "object" && "value" in doc ? doc.value : doc;
+    cache.set(key, crudo);
+    return usable(crudo, fallback);
+  }
+
+  /* Si lo guardado no tiene la forma que espera quien llama (un array
+     donde debería haber objeto, por ejemplo), gana el valor por defecto.
+     Es lo que evita que un dato raro deje una sección sin dibujar. */
+  function usable(valor, fallback) {
+    if (valor === null || valor === undefined) return fallback;
+    if (Array.isArray(fallback) && !Array.isArray(valor)) return fallback;
+    if (fallback !== null && typeof fallback === "object" && !Array.isArray(fallback)
+        && (typeof valor !== "object" || Array.isArray(valor))) return fallback;
+    return valor;
   }
 
   function set(key, value) {
@@ -144,7 +159,7 @@ const Store = (() => {
     if (m.includes("password") && m.includes("6")) return "La contraseña necesita al menos 6 caracteres.";
     if (m.includes("already registered")) return "Ese email ya existe: revisá la contraseña.";
     if (m.includes("failed to fetch")) return "No se pudo contactar a Supabase. Revisá la URL del proyecto.";
-    if (m.includes("invalid api key")) return "La clave anon no es válida.";
+    if (m.includes("invalid api key")) return "La clave no es válida. Copiá la publishable (sb_publishable_…) o la anon (eyJ…), no la service_role.";
     return msg;
   }
 

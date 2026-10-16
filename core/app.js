@@ -59,8 +59,24 @@ function renderCurrent() {
   const viejo = $("view-host");
   const host = viejo.cloneNode(false);
   viejo.replaceWith(host);
-  host.innerHTML = mod.render();
-  mod.setup?.();
+  // Si un módulo falla, la pantalla nunca queda en blanco: se muestra
+  // qué pasó y cómo salir del paso.
+  try {
+    host.innerHTML = mod.render();
+    mod.setup?.();
+  } catch (e) {
+    console.error("Wildev OS · falló el módulo", currentView, e);
+    host.innerHTML = `
+      <section class="card accent-pink">
+        <div class="card-head"><h2>Algo falló en esta sección</h2></div>
+        <p class="muted sub">Podés seguir usando el resto de la app desde la barra de abajo.</p>
+        <p class="dataset-note">${esc(e.message || String(e))}</p>
+        <div class="btn-row">
+          <button class="btn primary" onclick="location.reload()">Recargar</button>
+          <button class="btn ghost" data-goto="settings">Ir a Ajustes</button>
+        </div>
+      </section>`;
+  }
   window.scrollTo({ top: 0 });
 }
 
@@ -111,9 +127,13 @@ async function initApp() {
     if (nav) { navigate(nav.dataset.goto); return; }
   });
 
+  // Una sincronización baja muchas claves de golpe: se redibuja una sola
+  // vez al final en lugar de una por clave.
+  let redibujo = null;
   Store.subscribe((key) => {
-    if (key === "__status") renderHeader();
-    else renderCurrent();
+    if (key === "__status") { renderHeader(); return; }
+    clearTimeout(redibujo);
+    redibujo = setTimeout(() => renderCurrent(), 60);
   });
 
   // Si cambió el día mientras la app estaba abierta, redibuja.
@@ -129,6 +149,8 @@ async function initApp() {
   const pedida = new URLSearchParams(location.search).get("vista");
   let last = "today";
   try { last = localStorage.getItem("wildev-os:last-view") || "today"; } catch {}
+  // Ajustes y recordatorios son pantallas de paso: la app no arranca ahí.
+  if (last === "settings" || last === "reminders") last = "today";
   navigate(Modules[pedida] ? pedida : (Modules[last] ? last : "today"));
   renderHeader();
 

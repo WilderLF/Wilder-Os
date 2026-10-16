@@ -66,10 +66,21 @@ Esto crea tres tablas y les pone seguridad por filas: aunque alguien vea el cód
 
 ### 2.3 Sacar las dos claves
 
-1. **Project Settings** (el engranaje abajo a la izquierda) → **API**.
-2. Copiá:
-   - **Project URL** → algo como `https://abcdefgh.supabase.co`
-   - **anon public** → una clave larga que empieza con `eyJ...`
+El camino más rápido: el botón verde **Connect** de arriba de todo. Elegí la pestaña *App Frameworks* y vas a ver la URL y la clave juntas.
+
+También están por separado en el menú lateral:
+- **Settings → Data API** → la **Project URL**, algo como `https://abcdefgh.supabase.co`
+- **Settings → API Keys** → la clave
+
+Sobre cuál clave copiar: si ves **publishable key** (`sb_publishable_…`), usá esa. Si solo ves **anon public** (`eyJ…`), también sirve. La que **nunca** va en la app es `service_role` ni ninguna que diga *secret*.
+
+### 2.3b Para que el mail de confirmación no te mande a localhost
+
+En **Authentication → URL Configuration**:
+- **Site URL:** la dirección de tu app (`https://tuapp.vercel.app`)
+- En **Redirect URLs** agregá `https://tuapp.vercel.app/**`
+
+Y si no querés confirmar mails cada vez que sumes un dispositivo, en **Authentication → Sign In / Providers → Email** desactivá *Confirm email*.
 
 ### 2.4 Conectar desde la app
 
@@ -78,7 +89,7 @@ Esto crea tres tablas y les pone seguridad por filas: aunque alguien vea el cód
 3. Poné un email y una contraseña **que inventás vos** (son para entrar a tu app, no tienen que ser los de Supabase). Mínimo 6 caracteres.
 4. **Conectar**.
 
-Si te dice que confirmes el mail: andá a **Authentication → Providers → Email** en Supabase y desactivá *Confirm email*. Después volvé a tocar Conectar.
+Si te dice que confirmes el mail: abrí el mail, tocá el enlace (aunque te lleve a una página en blanco o a localhost, igual queda confirmado) y volvé a tocar Conectar.
 
 Cuando el cartel de arriba diga **"Guardado en la nube"**, está andando. Repetí este paso en cada dispositivo con el mismo email y contraseña.
 

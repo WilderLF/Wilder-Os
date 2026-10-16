@@ -11,7 +11,7 @@ const Notify = (() => {
   let timers = [];
 
   /* ---------- recordatorios configurados ---------- */
-  const todos = () => Store.get("reminders", null) || DEFAULT_REMINDERS;
+  const todos = () => Store.get("reminders", DEFAULT_REMINDERS);
   const activos = () => todos().filter(r => r.activo);
 
   function guardar(lista) {

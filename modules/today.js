@@ -20,8 +20,7 @@ const Today = {
   },
 
   habitosActivos() {
-    const guardados = Store.get("habits", null);
-    return guardados || DEFAULT_HABITS;
+    return Store.get("habits", DEFAULT_HABITS);
   },
 
   // Hábitos que se marcan solos desde otros módulos.
