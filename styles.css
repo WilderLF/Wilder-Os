@@ -452,3 +452,9 @@ textarea { resize: vertical; min-height: 56px; }
   .seg-row.tri .seg { font-size: 11px; }
   .wk-meta span { font-size: 15px; }
 }
+
+/* Elección de rutinas */
+.ex-preview { margin: 4px 0 2px; padding-left: 20px; font-size: 13px; line-height: 1.7; color: #ddd; }
+.ex-preview small { color: var(--muted); }
+.routine-tip { margin: 0 4px 13px; }
+details .card.nested { background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 14px 0 4px; margin: 14px 0 0; box-shadow: none; }

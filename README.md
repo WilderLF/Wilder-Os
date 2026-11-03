@@ -33,12 +33,15 @@ Tu sistema personal: rutinas, foco, trabajo, dinero, cuerpo y mente en una sola 
 - Gráfico de ingresos contra gastos por mes.
 
 ### 💪 Cuerpo
+- **3 rutinas full body para casa** (A: fuerza con mochila, B: potencia + rotación, C: densidad para definir), pensadas para definir manteniéndote entre 85 y 90 kg y rendir en softbol. Solo necesitás barra, paralelas y mochila. Elegís cuál hacer el día que quieras: la app cuenta cuántas hiciste en la semana y sugiere la que sigue, sin imponerla.
+- **Cardio y softbol** como sesiones opcionales, también a elección.
 - **Reproductor completo**, igual que en Wildev Training: animación del ejercicio, series una por una, cronómetro de descanso que arranca solo al completar cada serie, y el botón de cambiar animación si la del catálogo no es la correcta.
 - La sesión se guarda a medida que avanzás: si cerrás la app a mitad, al volver te ofrece continuar donde ibas.
 - Lista lateral con todos los ejercicios para saltar al que quieras.
 - **"¿Cómo llegás hoy?"**: cansado baja las series a 2, con energía suma una.
-- **Reto abdominal de 28 días** (Athlean-X) con los tres niveles. Al activarlo saca los abdominales de las rutinas y aparece como sesión aparte, con los bloques por tiempo encadenados.
+- **Reto abdominal de 28 días** (Athlean-X) con los tres niveles, siempre disponible como sesión aparte de las rutinas, con los bloques por tiempo encadenados.
 - **Comida**: objetivo de calorías que sube si entrenaste y baja si no, registro por gramos y barras de proteína, carbohidratos y grasas.
+- **Perfil**: tus datos, el rango de peso objetivo y las medidas. Con peso, cintura y cuello estima el porcentaje de grasa (método de la Marina de EE. UU.), la masa magra y guarda el historial. Es una estimación: importa más la tendencia que el número.
 
 ### 🧠 Mente
 - **Lectura** con racha de días seguidos. Viene cargado *Meditaciones* de Marco Aurelio; podés sumar los libros que quieras.

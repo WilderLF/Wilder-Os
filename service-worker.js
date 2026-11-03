@@ -1,4 +1,4 @@
-const CACHE = "wildev-os-v4";
+const CACHE = "wildev-os-v5";
 const ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./core/store.js", "./core/app.js", "./core/notify.js",
