@@ -81,6 +81,7 @@ const Settings = {
             ["goals", "Metas"],
             ["meals", "Comidas"],
             ["body-sessions", "Entrenamientos"],
+            ["body-measures", "Medidas corporales"],
             ["reading-log", "Lecturas"],
             ["journal", "Repaso del día"]
           ].map(([k, label]) => {

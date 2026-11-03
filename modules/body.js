@@ -4,6 +4,10 @@
    ejercicio, series una por una y cronómetro de descanso.
    ============================================================ */
 
+// Peso al que apuntás y porcentaje de grasa que usamos como referencia de "definido".
+const PESO_META = { min: 85, max: 90 };
+const GRASA_DEFINIDO = 12;
+
 const Body = {
   id: "body",
   tab: "entreno",
@@ -11,37 +15,36 @@ const Body = {
   timer: null,
   mediaToken: 0,
 
-  /* ---------- configuración y semana ---------- */
-  cfg() { return Store.get("body-config", { plan: "softball", formato: "split", nivelAbs: "beginner", absActivo: false }); },
+  /* ---------- configuración y catálogo ---------- */
+  cfg() { return Store.get("body-config", { plan: "softball", nivelAbs: "beginner" }); },
   setCfg(p) { Store.set("body-config", { ...this.cfg(), ...p }); },
 
-  semana() {
+  // Todas las sesiones disponibles. Ninguna depende del día: se elige cuál hacer.
+  catalogo() {
     const c = this.cfg();
-    const w = buildWeek(c.plan, c.formato);
-    if (!c.absActivo) return w;
-    // Con el reto activo se sacan los abdominales de las rutinas y se
-    // agrega el reto como sesión aparte, igual que en Wildev Training.
-    const abs = buildAbsSession(c.nivelAbs);
-    Object.values(w).forEach(d => {
-      d.sessions = d.sessions
-        .map(s => ({ ...s, exercises: s.exercises.filter(e => !ABS_REPLACES.includes(e.name)) }))
-        .filter(s => s.exercises.length);
-      d.sessions.push(abs);
-      d.duration = d.sessions.map(s => s.duration).join(" + ");
-    });
-    return w;
+    return [...buildRoutines(c.plan), ...EXTRA_SESSIONS, buildAbsSession(c.nivelAbs)];
   },
-
-  diaKey() { return DAY_ORDER[(new Date().getDay() + 6) % 7]; },
-  diaHoy() { return this.semana()[this.diaKey()]; },
-  sesionPorSlot(slot) {
-    const d = this.diaHoy();
-    return d.sessions.find(s => (s.slot ?? "") === slot) || d.sessions[Number(slot)] || d.sessions[0];
-  },
+  sesionPorSlot(slot) { return this.catalogo().find(s => s.slot === slot) || null; },
 
   /* ---------- registro ---------- */
   sesiones(k = today()) { return Store.get("body-sessions", {})[k] || {}; },
-  entrenoHecho(k = today()) { return Object.values(this.sesiones(k)).some(v => v === true); },
+  // El reto abdominal va aparte: por sí solo no cuenta como día de entrenamiento.
+  entrenoHecho(k = today()) { return Object.entries(this.sesiones(k)).some(([slot, v]) => v === true && slot !== "abs"); },
+  esRutina(slot) { return ROUTINE_KEYS.includes(slot) || ["am", "pm", "main"].includes(slot); },
+  rutinaHecha(k = today()) { return Object.entries(this.sesiones(k)).some(([slot, v]) => v === true && this.esRutina(slot)); },
+  rutinasSemana() {
+    const lunes = weekStart();
+    return Array.from({ length: 7 }, (_, i) => addDays(lunes, i)).filter(k => k <= today() && this.rutinaHecha(k)).length;
+  },
+  // Solo sugiere: la que sigue a la última hecha. Se puede elegir cualquiera.
+  rutinaSugerida() {
+    const hist = Store.get("body-sessions", {});
+    for (const k of Object.keys(hist).sort().reverse()) {
+      const hecha = ROUTINE_KEYS.filter(r => hist[k]?.[r] === true).pop();
+      if (hecha) return ROUTINE_KEYS[(ROUTINE_KEYS.indexOf(hecha) + 1) % ROUTINE_KEYS.length];
+    }
+    return ROUTINE_KEYS[0];
+  },
 
   marcarSesion(slot, k = today()) {
     Store.update("body-sessions", obj => {
@@ -51,6 +54,10 @@ const Body = {
       while (claves.length > 120) delete obj[claves.shift()];
       return obj;
     }, {});
+    if (slot === "abs") {
+      if (this.sesiones(k).abs) this.marcarAbs(k);
+      else Store.set("abs-days", this.absDias().filter(d => d !== k));
+    }
   },
 
   seriesHechas(slot, i, k = today()) { return Store.get("body-sets", {})[`${k}:${slot}:${i}`] || 0; },
@@ -70,7 +77,11 @@ const Body = {
   },
 
   /* ---------- estado del reproductor ---------- */
-  workout() { return Store.get("body-workout", null); },
+  workout() {
+    const w = Store.get("body-workout", null);
+    // Una sesión guardada con el formato viejo (mañana/tarde) ya no existe.
+    return w && this.sesionPorSlot(w.slot) ? w : null;
+  },
   setWorkout(w) { Store.set("body-workout", w); },
 
   empezar(slot) {
@@ -171,7 +182,12 @@ const Body = {
   perfil() { return Store.get("body-profile", { peso: 85, altura: 175, edad: 34, actividad: 1.3, objetivo: "mantener", proteinaPorKg: 2.0 }); },
   comidasDe(k = today()) { return Store.get("meals", {})[k] || []; },
   entrenoTipoDe(k = today()) {
-    return Store.get("training-type", {})[k] || (this.entrenoHecho(k) ? "strength" : "none");
+    const elegido = Store.get("training-type", {})[k];
+    if (elegido) return elegido;
+    // Sin elección manual, cuenta la sesión más exigente que marcaste.
+    const hechas = Object.entries(this.sesiones(k)).filter(([, v]) => v === true)
+      .map(([slot]) => SLOT_META[slot]?.tipo || "strength");
+    return [...TRAINING_TYPES].reverse().find(t => hechas.includes(t.id))?.id || "none";
   },
   setEntrenoTipo(id, k = today()) {
     Store.update("training-type", o => { o[k] = id; return o; }, {});
@@ -196,35 +212,87 @@ const Body = {
       { p: 0, c: 0, f: 0, kcal: 0 });
   },
 
+  /* ---------- medidas y grasa corporal ---------- */
+  medidas() { return Store.get("body-measures", []); },
+
+  // Fórmula de la Marina de EE. UU. (Hodgdon y Beckett) para hombres, en cm.
+  grasaPct({ cintura, cuello, altura }) {
+    if (!(cintura > cuello) || !(cuello > 0) || !(altura > 0)) return null;
+    const pct = 495 / (1.0324 - 0.19077 * Math.log10(cintura - cuello) + 0.15456 * Math.log10(altura)) - 450;
+    return pct > 0 && pct < 70 ? pct : null;
+  },
+
+  composicion(m) {
+    const pct = this.grasaPct(m);
+    if (pct === null || !(m.peso > 0)) return null;
+    const grasa = m.peso * pct / 100, magra = m.peso - grasa;
+    return { pct, grasa, magra, pesoDefinido: magra / (1 - GRASA_DEFINIDO / 100) };
+  },
+
+  categoriaGrasa(pct) {
+    if (pct < 6) return "Muy bajo: por debajo de lo saludable sostener";
+    if (pct < 14) return "Definido";
+    if (pct < 18) return "En forma";
+    if (pct < 25) return "Promedio";
+    return "Alto";
+  },
+
+  estadoPeso(peso) {
+    if (peso < PESO_META.min) return `Te faltan ${fmt1(PESO_META.min - peso)} kg para el rango`;
+    if (peso > PESO_META.max) return `Estás ${fmt1(peso - PESO_META.max)} kg arriba del rango`;
+    return "Dentro del rango ✓";
+  },
+
+  guardarMedida() {
+    const fecha = $("med-fecha").value;
+    const [peso, cintura, cuello] = ["med-peso", "med-cintura", "med-cuello"].map(id => parseFloat($(id).value));
+    const m = { fecha, peso, cintura, cuello, altura: this.perfil().altura };
+    if (!fecha || fecha > today()) { toast("Elegí una fecha válida.", "warn"); return; }
+    if (!(peso >= 30 && peso <= 250) || !this.composicion(m)) {
+      toast("Revisá los datos: la cintura tiene que ser mayor que el cuello.", "warn");
+      return;
+    }
+    const lista = [...this.medidas().filter(x => x.fecha !== fecha), m].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    Store.set("body-measures", lista);
+    // El peso más reciente también ajusta las calorías y la proteína.
+    if (lista.at(-1).fecha === fecha) Store.set("body-profile", { ...this.perfil(), peso });
+    toast("Medición guardada.");
+    refresh("body");
+  },
+
   /* ============ PANTALLA ============ */
   render() {
     if (this.modo === "workout" && this.workout()) return this.vistaWorkout();
-    if (this.modo === "picker") return this.vistaPicker();
+    if (this.modo === "picker" && this.workout()) return this.vistaPicker();
     return `
       <div class="tabs">
         <button class="tab ${this.tab === "entreno" ? "active" : ""}" data-btab="entreno">Entreno</button>
         <button class="tab ${this.tab === "comida" ? "active" : ""}" data-btab="comida">Comida</button>
+        <button class="tab ${this.tab === "perfil" ? "active" : ""}" data-btab="perfil">Perfil</button>
       </div>
-      ${this.tab === "entreno" ? this.vistaEntreno() : this.vistaComida()}
+      ${this.tab === "entreno" ? this.vistaEntreno() : this.tab === "comida" ? this.vistaComida() : this.vistaPerfil()}
     `;
   },
 
   /* ---------- lista de sesiones ---------- */
   vistaEntreno() {
-    const d = this.diaHoy();
-    const hechas = this.sesiones();
     const cfg = this.cfg();
+    const plan = PLAN_META[cfg.plan];
     const readiness = Store.get("readiness", "normal");
+    const semana = this.rutinasSemana();
+    const sugerida = this.rutinaSugerida();
+    const rutinas = buildRoutines(cfg.plan);
+    const extraActiva = EXTRA_SESSIONS.some(s => this.sesiones()[s.slot] || this.seriesTotales(s).hechas > 0);
 
     const enCurso = this.workout();
     const sesionEnCurso = enCurso ? this.sesionPorSlot(enCurso.slot) : null;
 
     return `
       <div class="hero compact">
-        <p class="eyebrow">${PLAN_META[cfg.plan].emoji} ${esc(d.label)}</p>
-        <h1>${this.entrenoHecho() ? "Entrenaste ✓" : esc(d.title)}</h1>
-        <p class="muted">${esc(d.goal)}</p>
-        <div class="hero-meta"><span>${esc(d.duration)}</span><span>${esc(d.intensity)}</span></div>
+        <p class="eyebrow">${plan.emoji} ${esc(plan.label)}</p>
+        <h1>${this.rutinaHecha() ? "Entrenaste ✓" : "Elegí tu rutina"}</h1>
+        <p class="muted">${esc(plan.description)}</p>
+        <div class="hero-meta"><span>Esta semana: ${semana} de ${WEEKLY_TARGET}</span><span>Sigue: ${esc(this.sesionPorSlot(sugerida).label)}</span></div>
       </div>
 
       ${sesionEnCurso ? `
@@ -247,43 +315,64 @@ const Body = {
         <p class="dataset-note">Cansado baja las series a 2; con energía suma una. Entrenar cansado con menos volumen le gana a no entrenar.</p>
       </section>
 
-      ${d.sessions.map((s, idx) => {
-        const slot = s.slot ?? String(idx);
-        const done = !!hechas[slot];
-        const total = s.exercises.reduce((a, e) => a + this.seriesDe(e), 0);
-        const hechasN = s.exercises.reduce((a, e, i) => a + Math.min(this.seriesHechas(slot, i), this.seriesDe(e)), 0);
-        const pct = total ? Math.round((hechasN / total) * 100) : 0;
-        return `<section class="card ${done ? "done-card" : ""}">
-          <div class="card-head">
-            <h2>${SLOT_META[s.slot]?.icon || "⚡"} ${esc(s.title)}</h2>
-            <span class="chip ${done ? "ok" : ""}">${done ? "hecha ✓" : s.duration}</span>
-          </div>
-          <p class="muted sub">${plural(s.exercises.length, "ejercicio", "ejercicios")}${s.place ? " · " + esc(s.place) : ""}</p>
-          ${hechasN > 0 && !done ? `<div class="focus-bar mini"><i style="width:${pct}%"></i></div><p class="dataset-note">${hechasN} de ${total} series</p>` : ""}
-          <div class="btn-row">
-            <button class="btn primary" data-empezar="${slot}">${hechasN > 0 && !done ? "Seguir" : "Empezar"}</button>
-            <button class="btn ghost" data-session="${slot}">${done ? "Desmarcar" : "Marcar hecha"}</button>
-          </div>
-        </section>`;
-      }).join("")}
+      ${rutinas.map(s => this.cardSesion(s, { sugerida: s.slot === sugerida })).join("")}
+
+      <p class="dataset-note routine-tip">Elegí la que quieras el día que quieras. Apuntá a ${WEEKLY_TARGET} por semana con un día de descanso entre medio. Cuando llegues al tope de repeticiones en todas las series, sumá 1-2 kg a la mochila.</p>
 
       ${this.cardAbs()}
 
+      <details class="card" ${extraActiva ? "open" : ""}>
+        <summary class="card-head"><h2>Cardio y softbol</h2></summary>
+        ${EXTRA_SESSIONS.map(s => this.cardSesion(s, { anidada: true })).join("")}
+      </details>
+
       <details class="card">
-        <summary class="card-head"><h2>Plan y ajustes</h2></summary>
+        <summary class="card-head"><h2>Plan</h2></summary>
         <label class="label" for="plan-select">Plan activo</label>
         <select id="plan-select">
           ${Object.entries(PLAN_META).map(([k, m]) => `<option value="${k}" ${k === cfg.plan ? "selected" : ""}>${m.emoji} ${m.label}</option>`).join("")}
-        </select>
-        <label class="label" for="formato-select">Lunes, miércoles y viernes</label>
-        <select id="formato-select">
-          <option value="split" ${cfg.formato === "split" ? "selected" : ""}>Mañana + tarde</option>
-          <option value="joined" ${cfg.formato === "joined" ? "selected" : ""}>Todo junto</option>
         </select>
       </details>
 
       ${this.cardSemanaEntreno()}
     `;
+  },
+
+  seriesTotales(s) {
+    const total = s.exercises.reduce((a, e) => a + this.seriesDe(e), 0);
+    const hechas = s.exercises.reduce((a, e, i) => a + Math.min(this.seriesHechas(s.slot, i), this.seriesDe(e)), 0);
+    return { total, hechas };
+  },
+
+  cuerpoSesion(s) {
+    const done = !!this.sesiones()[s.slot];
+    const { total, hechas } = this.seriesTotales(s);
+    const pct = total ? Math.round((hechas / total) * 100) : 0;
+    return `
+      ${hechas > 0 && !done ? `<div class="focus-bar mini"><i style="width:${pct}%"></i></div><p class="dataset-note">${hechas} de ${total} series</p>` : ""}
+      <div class="btn-row">
+        <button class="btn primary" data-empezar="${s.slot}">${hechas > 0 && !done ? "Seguir" : "Empezar"}</button>
+        <button class="btn ghost" data-session="${s.slot}">${done ? "Desmarcar" : "Marcar hecha"}</button>
+      </div>`;
+  },
+
+  cardSesion(s, { sugerida = false, anidada = false } = {}) {
+    const done = !!this.sesiones()[s.slot];
+    const clases = [anidada && "nested", done ? "done-card" : sugerida && "accent-green"].filter(Boolean).join(" ");
+    return `<section class="card ${clases}">
+      <div class="card-head">
+        <h2>${SLOT_META[s.slot]?.icon || "⚡"} ${esc(s.slot.length === 1 ? `${s.label} · ${s.title}` : s.title)}</h2>
+        <span class="chip ${done ? "ok" : ""}">${done ? "hecha ✓" : esc(s.duration)}</span>
+      </div>
+      <p class="muted sub">${esc(s.goal)}</p>
+      <details class="sub-details">
+        <summary>${sugerida && !done ? "Te toca · " : ""}${plural(s.exercises.length, "ejercicio", "ejercicios")}${s.place ? " · " + esc(s.place) : ""}${s.intensity ? " · " + esc(s.intensity) : ""}</summary>
+        <ol class="ex-preview">
+          ${s.exercises.map(e => `<li>${esc(e.name)} <small>${this.seriesDe(e)} × ${esc(e.reps)}</small></li>`).join("")}
+        </ol>
+      </details>
+      ${this.cuerpoSesion(s)}
+    </section>`;
   },
 
   cardAbs() {
@@ -294,16 +383,16 @@ const Body = {
     return `<section class="card accent-gold">
       <div class="card-head">
         <h2>🔥 Reto abdominal · 28 días</h2>
-        <button class="switch ${cfg.absActivo ? "on" : ""}" data-abs-toggle role="switch" aria-checked="${cfg.absActivo}" aria-label="Activar reto"><span></span></button>
+        <span class="chip ${hoy ? "ok" : ""}">${hoy ? "hecho ✓" : "10 min"}</span>
       </div>
-      ${cfg.absActivo ? `
-        <label class="label" for="abs-level">Nivel</label>
-        <select id="abs-level">
-          ${Object.values(ABS_LEVELS).map(l => `<option value="${l.key}" ${l.key === cfg.nivelAbs ? "selected" : ""}>${l.label} · ${l.work}s trabajo / ${l.rest}s descanso</option>`).join("")}
-        </select>
-        <div class="abs-track"><i style="width:${Math.min(100, (dias / ABS_CHALLENGE_DAYS) * 100)}%"></i></div>
-        <p class="dataset-note"><strong>Día ${Math.min(dias + (hoy ? 0 : 1), ABS_CHALLENGE_DAYS)} de ${ABS_CHALLENGE_DAYS}</strong> · ${dias} completados · ${lvl.work}s / ${lvl.rest}s${hoy ? " · hoy ya lo hiciste ✓" : ""}</p>`
-        : '<p class="dataset-note">Al activarlo aparece todos los días como sesión aparte y se sacan los abdominales de las rutinas para no duplicar trabajo.</p>'}
+      <p class="muted sub">Sesión aparte de las rutinas: hacela sola o después de entrenar.</p>
+      <label class="label" for="abs-level">Nivel</label>
+      <select id="abs-level">
+        ${Object.values(ABS_LEVELS).map(l => `<option value="${l.key}" ${l.key === cfg.nivelAbs ? "selected" : ""}>${l.label} · ${l.work}s trabajo / ${l.rest}s descanso</option>`).join("")}
+      </select>
+      <div class="abs-track"><i style="width:${Math.min(100, (dias / ABS_CHALLENGE_DAYS) * 100)}%"></i></div>
+      <p class="dataset-note"><strong>Día ${Math.min(dias + (hoy ? 0 : 1), ABS_CHALLENGE_DAYS)} de ${ABS_CHALLENGE_DAYS}</strong> · ${dias} completados</p>
+      ${this.cuerpoSesion(this.sesionPorSlot("abs"))}
     </section>`;
   },
 
@@ -482,12 +571,76 @@ const Body = {
           </div>`;
         }).join("") : '<p class="muted">Todavía no registraste nada hoy.</p>'}
       </section>
-
-      <details class="card">
-        <summary class="card-head"><h2>Mi perfil</h2></summary>
-        ${this.formPerfil()}
-      </details>
     `;
+  },
+
+  /* ---------- perfil: datos y medidas ---------- */
+  vistaPerfil() {
+    const p = this.perfil();
+    const lista = this.medidas();
+    const ultima = lista.at(-1) || null;
+    const comp = ultima ? this.composicion(ultima) : null;
+    const peso = ultima?.peso ?? p.peso;
+
+    return `
+      <div class="hero compact">
+        <p class="eyebrow">Mi perfil</p>
+        <h1>${comp ? `${fmt1(comp.pct)} % de grasa` : "Cargá tus medidas"}</h1>
+        <p class="muted">${comp ? `${esc(this.categoriaGrasa(comp.pct))} · medido el ${esc(shortDate(ultima.fecha))}` : "Con peso, cintura y cuello calculamos tu porcentaje de grasa."}</p>
+        ${comp ? `<div class="hero-meta"><span>Masa magra ${fmt1(comp.magra)} kg</span><span>Grasa ${fmt1(comp.grasa)} kg</span></div>` : ""}
+      </div>
+
+      <section class="card accent-green">
+        <div class="card-head"><h2>Objetivo ${PESO_META.min}-${PESO_META.max} kg</h2><span class="chip">${fmt1(peso)} kg</span></div>
+        <p class="muted sub">${esc(this.estadoPeso(peso))}</p>
+        ${comp ? `<p class="dataset-note">Con tu masa magra actual, a ${GRASA_DEFINIDO} % de grasa pesarías unos ${fmt1(comp.pesoDefinido)} kg.</p>` : ""}
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Nueva medición</h2></div>
+        <div class="form-grid">
+          <label class="label-mini">Fecha<input id="med-fecha" type="date" max="${today()}" value="${today()}" /></label>
+          <label class="label-mini">Peso (kg)<input id="med-peso" type="number" inputmode="decimal" step="0.1" value="${peso}" /></label>
+          <label class="label-mini">Cintura (cm)<input id="med-cintura" type="number" inputmode="decimal" step="0.5" value="${ultima?.cintura ?? ""}" /></label>
+          <label class="label-mini">Cuello (cm)<input id="med-cuello" type="number" inputmode="decimal" step="0.5" value="${ultima?.cuello ?? ""}" /></label>
+        </div>
+        <p id="med-preview" class="food-preview"></p>
+        <button id="med-guardar" class="btn primary full">Guardar medición</button>
+        <details class="sub-details">
+          <summary>Cómo medirte</summary>
+          <p class="dataset-note">Usá una cinta métrica, a la mañana y en ayunas, sin apretar. <strong>Cintura:</strong> a la altura del ombligo, relajado, al final de una exhalación normal. <strong>Cuello:</strong> justo debajo de la nuez. Repetí cada 2 semanas en las mismas condiciones.</p>
+          <p class="dataset-note">Es una estimación por el método de la Marina de EE. UU. y puede errar varios puntos: mirá la tendencia más que el número exacto.</p>
+        </details>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Historial</h2><span class="chip">${plural(lista.length, "medición", "mediciones")}</span></div>
+        ${lista.length ? lista.map((m, i) => {
+          const c = this.composicion(m);
+          const prev = i > 0 ? this.composicion(lista[i - 1]) : null;
+          const dif = c && prev ? c.pct - prev.pct : null;
+          return `<div class="food-item">
+            <div><strong>${esc(shortDate(m.fecha))}</strong><small>${fmt1(m.peso)} kg · cintura ${fmt1(m.cintura)} · cuello ${fmt1(m.cuello)}${dif !== null ? ` · ${dif > 0 ? "+" : ""}${fmt1(dif)} pts` : ""}</small></div>
+            <span class="food-kcal">${c ? fmt1(c.pct) + " %" : "—"}</span>
+            <button class="icon-btn" data-del-medida="${esc(m.fecha)}" aria-label="Borrar">✕</button>
+          </div>`;
+        }).reverse().join("") : '<p class="muted">Todavía no cargaste ninguna medición.</p>'}
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Mis datos</h2></div>
+        ${this.formPerfil()}
+      </section>
+    `;
+  },
+
+  actualizarPreviewMedida() {
+    const el = $("med-preview");
+    if (!el) return;
+    const [peso, cintura, cuello] = ["med-peso", "med-cintura", "med-cuello"].map(id => parseFloat($(id).value));
+    const c = this.composicion({ peso, cintura, cuello, altura: this.perfil().altura });
+    el.innerHTML = c ? `<strong>${fmt1(c.pct)} % de grasa</strong> · ${esc(this.categoriaGrasa(c.pct))}
+      <span class="preview-sub">Altura usada: ${fmt1(this.perfil().altura)} cm</span>` : "";
   },
 
   barra(label, valor, meta, cls) {
@@ -513,7 +666,7 @@ const Body = {
       <option value="definir" ${p.objetivo === "definir" ? "selected" : ""}>Bajar grasa (−350 kcal)</option>
       <option value="subir" ${p.objetivo === "subir" ? "selected" : ""}>Ganar músculo (+250 kcal)</option>
     </select>
-    <p class="dataset-note">El nivel de actividad base es tu vida diaria; el entrenamiento se suma por día según lo que marques arriba.</p>`;
+    <p class="dataset-note">El nivel de actividad base es tu vida diaria; el entrenamiento se suma por día según lo que marques en Comida.</p>`;
   },
 
   /* ============ INTERACCIÓN ============ */
@@ -522,7 +675,8 @@ const Body = {
     this.pararTimer();
 
     if (this.modo === "workout" && this.workout()) { this.setupWorkout(host); return; }
-    if (this.modo === "picker") { this.setupPicker(host); return; }
+    if (this.modo === "picker" && this.workout()) { this.setupPicker(host); return; }
+    this.modo = "lista";
 
     host.addEventListener("click", e => {
       const t = e.target.closest("[data-btab]");
@@ -535,7 +689,12 @@ const Body = {
       if (s) { this.marcarSesion(s.dataset.session); refresh("body"); return; }
       const r = e.target.closest("[data-ready]");
       if (r) { Store.set("readiness", r.dataset.ready); refresh("body"); return; }
-      if (e.target.closest("[data-abs-toggle]")) { this.setCfg({ absActivo: !this.cfg().absActivo }); refresh("body"); return; }
+      const dm = e.target.closest("[data-del-medida]");
+      if (dm) {
+        Store.set("body-measures", this.medidas().filter(m => m.fecha !== dm.dataset.delMedida));
+        refresh("body");
+        return;
+      }
       const tr = e.target.closest("[data-btrain]");
       if (tr) { this.setEntrenoTipo(tr.dataset.btrain); return; }
       const df = e.target.closest("[data-del-food]");
@@ -562,8 +721,10 @@ const Body = {
         refresh("body");
         return;
       }
-      if (e.target.id === "plan-select" || e.target.id === "formato-select") {
-        this.setCfg({ plan: $("plan-select").value, formato: $("formato-select").value });
+      if (e.target.id === "plan-select") {
+        // Cada plan tiene otras rutinas: una sesión a medias no se puede continuar.
+        this.setWorkout(null);
+        this.setCfg({ plan: e.target.value });
         refresh("body");
         return;
       }
@@ -571,6 +732,11 @@ const Body = {
     });
 
     if (this.tab === "comida") this.setupComida();
+    if (this.tab === "perfil") {
+      this.actualizarPreviewMedida();
+      ["med-peso", "med-cintura", "med-cuello"].forEach(id => $(id).addEventListener("input", () => this.actualizarPreviewMedida()));
+      $("med-guardar").addEventListener("click", () => this.guardarMedida());
+    }
   },
 
   setupWorkout(host) {

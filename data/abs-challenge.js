@@ -71,15 +71,6 @@ const ABS_EXERCISES = [
   }
 ];
 
-// Ejercicios de abdomen de las rutinas normales que el reto reemplaza.
-const ABS_REPLACES = [
-  "Elevación de rodillas colgado",
-  "Elevación de rodillas con giro",
-  "Dead bug",
-  "Mountain climbers",
-  "Plancha lateral"
-];
-
 // Devuelve la sesión del reto para el nivel indicado.
 function buildAbsSession(levelKey = "beginner") {
   const lvl = ABS_LEVELS[levelKey] || ABS_LEVELS.beginner;
