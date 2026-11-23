@@ -1,5 +1,6 @@
 const PLAN_META={
  general:{label:'Rendimiento',emoji:'⚡',description:'Full body equilibrado para fuerza, movilidad y rendimiento general.',accent:'#91e358'},
+ gym:{label:'Gimnasio · Definición + softbol',emoji:'🏋️',description:'3 rutinas full body en el gimnasio para definir manteniéndote entre 85 y 90 kg. Primero la definición; el softbol suma potencia, rotación y hombro sano. Mismo plan que Nilmar: mismas series y repeticiones, cada uno con su peso.',accent:'#91e358',tip:'Elegí la que quieras el día que quieras, con un día de descanso entre medio. Cuando llegues al tope de repeticiones en todas las series, subí el peso la próxima vez (2,5 kg en barra, el siguiente par de mancuernas).'},
  softball:{label:'Softbol + definición',emoji:'🥎',description:'3 rutinas full body para casa con barra, paralelas y mochila. Definir manteniéndote entre 85 y 90 kg, con trabajo específico para el softbol.',accent:'#e63b64'},
  skate:{label:'Skate',emoji:'🛹',description:'Full body con equilibrio, tobillo, cadera, fuerza unilateral y aterrizajes.',accent:'#4ea0ef'},
  fixie:{label:'Fixie',emoji:'🚲',description:'Full body complementario al ciclismo: cadena posterior, core y movilidad.',accent:'#f1b541'}
@@ -77,6 +78,48 @@ PLANS.softball={
 };
 
 /* Sesiones opcionales: cardio y softbol. Se eligen igual que las rutinas. */
+/* ============ GIMNASIO · Definición + softbol ============
+   Mismo plan que la app de Nilmar: mismas series, repeticiones y
+   descansos para entrenar juntos. Cambia el peso y, en pocos
+   ejercicios, la variante. Si la cambiás acá, cambiala también allá. */
+const ROT_EXT_POLEA=ex('Rotación externa en polea',2,'15 por lado',45,'cable standing shoulder external rotation','Polea a la altura del codo, codo pegado al cuerpo y peso liviano. Cuida el manguito rotador del brazo de lanzar.');
+
+PLANS.gym={
+ A:session('Rutina A','Fuerza pesada','55-60 min','Alta','Pocas repeticiones con mucho peso: es lo que le dice al cuerpo que conserve el músculo mientras estás en déficit. Dejá 1-2 repeticiones en reserva.',[
+  ex('Entrada en calor en cinta inclinada',1,'6-8 min',0,'walking on incline treadmill','Inclinación 5-8 %, ritmo cómodo. Después hacé 2 series livianas del primer ejercicio.'),
+  ex('Sentadilla con barra',4,'6-8',150,'barbell full squat','Barra sobre los trapecios, pies al ancho de hombros. Bajá hasta que la cadera pase la rodilla con la espalda neutra. Nilmar hace sentadilla goblet.'),
+  ex('Press de banca con mancuernas',4,'6-8',120,'dumbbell bench press','Omóplatos juntos y pies firmes. Bajá hasta el costado del pecho en 2 segundos.'),
+  ex('Dominadas con lastre',4,'6-8',120,'weighted pull-up','Con cinturón o mancuerna entre los pies. Sin lastre hasta hacer 8 limpias. Nilmar hace jalón al pecho.'),
+  ex('Peso muerto rumano con barra',3,'8-10',120,'barbell romanian deadlift','Cadera atrás, barra pegada a las piernas, rodillas apenas flexionadas. Bajá hasta sentir el estiramiento detrás del muslo.'),
+  ex('Remo sentado en polea',3,'10-12',90,'cable seated row','Pecho alto, llevá los codos atrás y juntá los omóplatos.'),
+  ROT_EXT_POLEA,
+  ex('Cinta inclinada',1,'10 min',0,'','Inclinación 8-12 %, caminando rápido sin agarrarte. Suma gasto sin quitarle recuperación a las piernas.',true)
+ ]),
+ B:session('Rutina B','Potencia + unilateral','55-60 min','Alta','Lo más específico para softbol: salto, giro de cadera y una pierna por vez. Lo explosivo va primero, estando fresco. Mejor no elegirla el día antes de un partido.',[
+  ex('Entrada en calor en bici',1,'6-8 min',0,'stationary bike walk','Resistencia baja. Sumá balanceos de pierna y rotaciones de torso.'),
+  ex('Saltos al cajón',3,'5',90,'','Cajón a la altura de la rodilla. Saltá fuerte, caé suave con las dos piernas y bajá caminando, sin saltar. Nilmar hace sentadilla al cajón rápida.',true),
+  ex('Lanzamiento rotacional con balón medicinal',3,'6 por lado',60,'','De costado a la pared, balón de 3-5 kg: girá desde la cadera de atrás y lanzalo fuerte contra la pared. Es el patrón del swing.',true),
+  ex('Sentadilla búlgara con mancuernas',3,'8-10 por pierna',90,'bulgarian split squat','Pie de atrás en el banco. Torso apenas inclinado. Nilmar hace subida al cajón.'),
+  ex('Hip thrust con barra',3,'10-12',90,'barbell glute bridge','Espalda en el banco, barra sobre la cadera con almohadilla. Apretá glúteos 1 segundo arriba: el motor del bateo y la carrera.'),
+  ex('Press de hombros con mancuernas sentado',3,'8-10',90,'dumbbell seated shoulder press','Con respaldo y sin arquear la espalda. Bajá hasta la altura de las orejas.'),
+  ex('Fondos con lastre',3,'8-10',90,'chest dip','Torso apenas inclinado hacia adelante, bajá hasta ~90° de codo. Nilmar hace press de pecho en máquina.'),
+  ex('Remo a una mano con mancuerna',3,'10-12 por lado',60,'dumbbell one arm bent over row','Mano y rodilla en el banco. Llevá la mancuerna a la cadera sin girar el torso.'),
+  ex('Press Pallof en polea',3,'10 por lado',45,'band horizontal pallof press','De costado a la polea, estirá los brazos al frente sin dejar que el torso gire. Core que transfiere fuerza al swing.')
+ ]),
+ C:session('Rutina C','Densidad para definir','50-55 min','Media/alta','Más repeticiones y descansos cortos: gasta más y suma volumen de músculo. Se puede hacer en parejas: uno trabaja mientras el otro descansa.',[
+  ex('Entrada en calor en cinta',1,'5 min',0,'walking on incline treadmill','Ritmo cómodo con algo de inclinación.'),
+  ex('Prensa de piernas',3,'12-15',75,'sled 45 leg press','Pies al ancho de cadera. Bajá hasta 90° de rodilla sin despegar la cola del respaldo.'),
+  ex('Jalón al pecho',3,'10-12',60,'cable lat pulldown full range of motion','Barra al pecho, no a la nuca. Codos hacia abajo y pecho arriba.'),
+  ex('Press inclinado con mancuernas',3,'10-12',60,'dumbbell incline bench press','Banco a 30°. Pecho alto y hombros.'),
+  ex('Curl femoral acostado',3,'12-15',60,'lever lying leg curl','Isquiotibiales: protegen la rodilla en los sprints entre bases.'),
+  ex('Remo en máquina',3,'12',60,'lever seated row','Pecho apoyado, codos atrás.'),
+  ex('Zancada lateral con mancuerna',3,'10 por lado',60,'barbell lateral lunge','Mancuerna al pecho. Paso largo al costado, cadera atrás y la otra pierna estirada. Desplazamiento lateral para defensa.'),
+  ex('Elevaciones laterales',3,'12-15',45,'dumbbell lateral raise','Peso liviano, subí hasta la altura de los hombros.'),
+  ex('Paseo del granjero',3,'30-40 m',60,'farmers walk','Mancuernas pesadas a los costados, caminá erguido y sin apuro. Agarre para el bate y core.'),
+  ex('Intervalos en bici',1,'8 × 20 s fuerte / 40 s suave',0,'','Cierre metabólico de 8 minutos. Fuerte de verdad en los 20 segundos.',true)
+ ])
+};
+
 const EXTRA_SESSIONS=[
  session('Cardio','Velocidad + cardio','40-45 min','Media/alta','Aceleración para correr bases (hay ~18 m entre bases) y base aeróbica. Se hace afuera. Si molesta rodilla o tobillo, cambiá los sprints por 8 × 20 s fuertes en bici.',[
   ex('Trote suave de entrada en calor',1,'8-10 min',0,'','Ritmo muy cómodo.',true),

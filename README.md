@@ -34,6 +34,7 @@ Tu sistema personal: rutinas, foco, trabajo, dinero, cuerpo y mente en una sola 
 
 ### 💪 Cuerpo
 - **3 rutinas full body para casa** (A: fuerza con mochila, B: potencia + rotación, C: densidad para definir), pensadas para definir manteniéndote entre 85 y 90 kg y rendir en softbol. Solo necesitás barra, paralelas y mochila. Elegís cuál hacer el día que quieras: la app cuenta cuántas hiciste en la semana y sugiere la que sigue, sin imponerla.
+- **Plan Gimnasio · Definición + softbol**: otras 3 rutinas full body para el gimnasio (A: fuerza pesada, B: potencia + unilateral, C: densidad para definir). Primero la definición, el softbol en segundo plano. Es el mismo plan que la app de Nilmar, con las mismas series y repeticiones para entrenar juntos: cada uno usa su peso y, en pocos ejercicios, su variante.
 - **Cardio y softbol** como sesiones opcionales, también a elección.
 - **Reproductor completo**, igual que en Wildev Training: animación del ejercicio, series una por una, cronómetro de descanso que arranca solo al completar cada serie, y el botón de cambiar animación si la del catálogo no es la correcta.
 - La sesión se guarda a medida que avanzás: si cerrás la app a mitad, al volver te ofrece continuar donde ibas.

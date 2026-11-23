@@ -317,7 +317,7 @@ const Body = {
 
       ${rutinas.map(s => this.cardSesion(s, { sugerida: s.slot === sugerida })).join("")}
 
-      <p class="dataset-note routine-tip">Elegí la que quieras el día que quieras. Apuntá a ${WEEKLY_TARGET} por semana con un día de descanso entre medio. Cuando llegues al tope de repeticiones en todas las series, sumá 1-2 kg a la mochila.</p>
+      <p class="dataset-note routine-tip">${esc(plan.tip || `Elegí la que quieras el día que quieras. Apuntá a ${WEEKLY_TARGET} por semana con un día de descanso entre medio. Cuando llegues al tope de repeticiones en todas las series, sumá 1-2 kg a la mochila.`)}</p>
 
       ${this.cardAbs()}
 
